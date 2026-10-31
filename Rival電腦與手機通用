@@ -1,0 +1,197 @@
+-- ==========================================
+-- 終極雙端版：@jiaNBB666 (第一段：UI與變數)
+-- ==========================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local Config = {
+    Enabled = true, Name = true, Distance = true,
+    HealthText = true, HealthBar = true, Chams = false,
+    FlyEnabled = false, FlyNoclip = true, TPEnabled = false, TP_Distance = 2,
+    TracerEnabled = false
+}
+local ESP_Objects = {}
+local Chams_Objects = {}
+local MaxDistance = 350
+local MaxTracers = 6
+
+local isFlying = false
+local flySpeed = 60
+local bodyVelocity = nil
+local flyUp = false
+local flyDown = false
+local isMenuOpen = true
+
+-- 追蹤線物件
+local TracerLines = {}
+for i = 1, MaxTracers do
+    local line = Drawing.new("Line")
+    line.Thickness = 1.5
+    line.Color = Color3.fromRGB(0, 255, 0)
+    line.Visible = false
+    table.insert(TracerLines, line)
+end
+
+-- 強制 UI 顯示
+local GuiParent = pcall(function() return gethui() end) and gethui() or game:GetService("CoreGui")
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ESP_jiaNBB666_Dual"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 99999
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = GuiParent
+
+-- 主選單 UI
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 280, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -140, 0.1, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BackgroundTransparency = 0.3
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+local UICorner = Instance.new("UICorner") UICorner.CornerRadius = UDim.new(0, 8) UICorner.Parent = MainFrame
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 30)
+TitleBar.BackgroundColor3 = Color3.fromRGB(0, 255, 200)
+TitleBar.BackgroundTransparency = 0.2
+TitleBar.Parent = MainFrame
+local TitleCorner = Instance.new("UICorner") TitleCorner.CornerRadius = UDim.new(0, 8) TitleCorner.Parent = TitleBar
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, 0, 1, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "≡ @jiaNBB666 (雙端版) ≡"
+TitleText.TextColor3 = Color3.fromRGB(0, 0, 0)
+TitleText.Font = Enum.Font.SourceSansBold
+TitleText.TextSize = 14
+TitleText.Parent = TitleBar
+
+local FoldBtn = Instance.new("TextButton")
+FoldBtn.Size = UDim2.new(0, 30, 1, 0)
+FoldBtn.Position = UDim2.new(1, -30, 0, 0)
+FoldBtn.BackgroundTransparency = 1
+FoldBtn.Text = "▼"
+FoldBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+FoldBtn.Font = Enum.Font.SourceSansBold
+FoldBtn.Parent = TitleBar
+
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, 0, 0, 195)
+ContentFrame.Position = UDim2.new(0, 0, 0, 30)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+FoldBtn.MouseButton1Click:Connect(function()
+    isMenuOpen = not isMenuOpen
+    if isMenuOpen then
+        MainFrame.Size = UDim2.new(0, 280, 0, 260)
+        ContentFrame.Visible = true
+        FoldBtn.Text = "▼"
+    else
+        MainFrame.Size = UDim2.new(0, 280, 0, 30)
+        ContentFrame.Visible = false
+        FoldBtn.Text = "▲"
+    end
+end)
+
+-- 頁面 1
+local Page1 = Instance.new("Frame")
+Page1.Size = UDim2.new(1, 0, 0, 160)
+Page1.Position = UDim2.new(0, 0, 0, 5)
+Page1.BackgroundTransparency = 1
+Page1.Parent = ContentFrame
+
+local function createToggle(parent, text, posX, posY, configKey)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.45, 0, 0, 28)
+    btn.Position = UDim2.new(posX, 0, 0, posY)
+    btn.BackgroundColor3 = Config[configKey] and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
+    btn.BackgroundTransparency = 0.2
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = text .. (Config[configKey] and " [ON]" or " [OFF]")
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 11
+    btn.Parent = parent
+
+    btn.MouseButton1Click:Connect(function()
+        Config[configKey] = not Config[configKey]
+        btn.Text = text .. (Config[configKey] and " [ON]" or " [OFF]")
+        btn.BackgroundColor3 = Config[configKey] and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
+    end)
+end
+
+createToggle(Page1, "透視總開關", 0.03, 5, "Enabled")
+createToggle(Page1, "名字顯示", 0.03, 38, "Name")
+createToggle(Page1, "距離顯示", 0.52, 38, "Distance")
+createToggle(Page1, "血量數字", 0.03, 71, "HealthText")
+createToggle(Page1, "血條顯示", 0.52, 71, "HealthBar")
+createToggle(Page1, "全身染色", 0.03, 104, "Chams")
+createToggle(Page1, "敵人追蹤線", 0.52, 104, "TracerEnabled")
+
+-- 頁面 2
+local Page2 = Instance.new("Frame")
+Page2.Size = UDim2.new(1, 0, 0, 160)
+Page2.Position = UDim2.new(0, 0, 0, 5)
+Page2.BackgroundTransparency = 1
+Page2.Visible = false
+Page2.Parent = ContentFrame
+
+local FlyToggleBtn = Instance.new("TextButton")
+FlyToggleBtn.Size = UDim2.new(0.45, 0, 0, 28)
+FlyToggleBtn.Position = UDim2.new(0.03, 0, 0, 5)
+FlyToggleBtn.BackgroundColor3 = Config.FlyEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
+FlyToggleBtn.BackgroundTransparency = 0.2
+FlyToggleBtn.Text = "飛天開關" .. (Config.FlyEnabled and " [ON]" or " [OFF]")
+FlyToggleBtn.Font = Enum.Font.SourceSansBold
+FlyToggleBtn.TextSize = 11
+FlyToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlyToggleBtn.Parent = Page2
+
+local NoclipBtn = Instance.new("TextButton")
+NoclipBtn.Size = UDim2.new(0.45, 0, 0, 28)
+NoclipBtn.Position = UDim2.new(0.52, 0, 0, 5)
+NoclipBtn.BackgroundColor3 = Config.FlyNoclip and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
+NoclipBtn.BackgroundTransparency = 0.2
+NoclipBtn.Text = "飛天穿牆" .. (Config.FlyNoclip and " [ON]" or " [OFF]")
+NoclipBtn.Font = Enum.Font.SourceSansBold
+NoclipBtn.TextSize = 11
+NoclipBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoclipBtn.Parent = Page2
+
+local TPToggleBtn = Instance.new("TextButton")
+TPToggleBtn.Size = UDim2.new(0.45, 0, 0, 28)
+TPToggleBtn.Position = UDim2.new(0.03, 0, 0, 38)
+TPToggleBtn.BackgroundColor3 = Config.TPEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
+TPToggleBtn.BackgroundTransparency = 0.2
+TPToggleBtn.Text = "瞬移 (T)" .. (Config.TPEnabled and " [ON]" or " [OFF]")
+TPToggleBtn.Font = Enum.Font.SourceSansBold
+TPToggleBtn.TextSize = 11
+TPToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TPToggleBtn.Parent = Page2
+                        -- ==========================================
+-- 終極雙端版：@jiaNBB666 (第二段：核心邏輯)
+-- ==========================================
+local function createTPDistanceBtn(text, posX, posY, distValue)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.28, 0, 0, 25)
+    btn.Position = UDim2.new(posX, 0, 0, posY)
+    btn.BackgroundColor3 = (Config.TP_Distance == distValue) and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(50, 50, 50)
+    btn.TextColor3 = (Config.TP_Distance == distValue) and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
+    btn.Text = text
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 11
+    btn.Parent = Page2
+
+    btn.MouseButton1Click:Connect(function()
+        Config.TP_Distance = distValue
+        for _, child in pairs(Page2:GetChildren()) do
+            if child:IsA("TextButton") and (child.Text == "2m" or child.Text == "5m" or child.Text == "10m") then
+                child.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                child.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(0, 255, 
