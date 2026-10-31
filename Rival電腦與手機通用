@@ -195,3 +195,392 @@ local function createTPDistanceBtn(text, posX, posY, distValue)
             end
         end
         btn.BackgroundColor3 = Color3.fromRGB(0, 255, 
+-- ==========================================
+-- 終極雙端版：@jiaNBB666 (第二段：核心邏輯)
+-- ==========================================
+local function createTPDistanceBtn(text, posX, posY, distValue)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.28, 0, 0, 25)
+    btn.Position = UDim2.new(posX, 0, 0, posY)
+    btn.BackgroundColor3 = (Config.TP_Distance == distValue) and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(50, 50, 50)
+    btn.TextColor3 = (Config.TP_Distance == distValue) and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
+    btn.Text = text
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 11
+    btn.Parent = Page2
+
+    btn.MouseButton1Click:Connect(function()
+        Config.TP_Distance = distValue
+        for _, child in pairs(Page2:GetChildren()) do
+            if child:IsA("TextButton") and (child.Text == "2m" or child.Text == "5m" or child.Text == "10m") then
+                child.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                child.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(0, 255, 200)
+        btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    end)
+end
+
+createTPDistanceBtn("2m", 0.03, 71, 2)
+createTPDistanceBtn("5m", 0.36, 71, 5)
+createTPDistanceBtn("10m", 0.69, 71, 10)
+
+local function toggleFly()
+    Config.FlyEnabled = not Config.FlyEnabled
+    FlyToggleBtn.Text = "飛天開關" .. (Config.FlyEnabled and " [ON]" or " [OFF]")
+    FlyToggleBtn.BackgroundColor3 = Config.FlyEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
+
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not hum or not root then return end
+
+    isFlying = Config.FlyEnabled
+    if isFlying then
+        hum.PlatformStand = true
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyVelocity.Parent = root
+    else
+        hum.PlatformStand = false
+        if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
+        flyUp = false; flyDown = false
+        for _, part in pairs(char:GetChildren()) do
+            if part:IsA("BasePart") then part.CanCollide = true end
+        end
+    end
+end
+
+FlyToggleBtn.MouseButton1Click:Connect(toggleFly)
+
+TPToggleBtn.MouseButton1Click:Connect(function()
+    Config.TPEnabled = not Config.TPEnabled
+    TPToggleBtn.Text = "瞬移 (T)" .. (Config.TPEnabled and " [ON]" or " [OFF]")
+    TPToggleBtn.BackgroundColor3 = Config.TPEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
+end)
+
+NoclipBtn.MouseButton1Click:Connect(function()
+    Config.FlyNoclip = not Config.FlyNoclip
+    NoclipBtn.Text = "飛天穿牆" .. (Config.FlyNoclip and " [ON]" or " [OFF]")
+    NoclipBtn.BackgroundColor3 = Config.FlyNoclip and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
+end)
+
+-- 鍵盤快捷鍵綁定 (X=上升, Z=下降)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.X then
+        flyUp = true
+    elseif input.KeyCode == Enum.KeyCode.Z then
+        flyDown = true
+    elseif input.KeyCode == Enum.KeyCode.T then
+        Config.TPEnabled = not Config.TPEnabled
+        TPToggleBtn.Text = "瞬移 (T)" .. (Config.TPEnabled and " [ON]" or " [OFF]")
+        TPToggleBtn.BackgroundColor3 = Config.TPEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.X then
+        flyUp = false
+    elseif input.KeyCode == Enum.KeyCode.Z then
+        flyDown = false
+    end
+end)
+
+-- 分頁切換
+local TabFrame = Instance.new("Frame")
+TabFrame.Size = UDim2.new(1, 0, 0, 30)
+TabFrame.Position = UDim2.new(0, 0, 1, -30)
+TabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TabFrame.BackgroundTransparency = 0.2
+TabFrame.Parent = ContentFrame
+local TabCorner = Instance.new("UICorner") TabCorner.CornerRadius = UDim.new(0, 8) TabCorner.Parent = TabFrame
+
+local Tab1Btn = Instance.new("TextButton")
+Tab1Btn.Size = UDim2.new(0.5, 0, 1, 0)
+Tab1Btn.BackgroundColor3 = Color3.fromRGB(0, 255, 200)
+Tab1Btn.BackgroundTransparency = 0.2
+Tab1Btn.Text = "透視設定"
+Tab1Btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+Tab1Btn.Font = Enum.Font.SourceSansBold
+Tab1Btn.TextSize = 14
+Tab1Btn.Parent = TabFrame
+
+local Tab2Btn = Instance.new("TextButton")
+Tab2Btn.Size = UDim2.new(0.5, 0, 1, 0)
+Tab2Btn.Position = UDim2.new(0.5, 0, 0, 0)
+Tab2Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Tab2Btn.BackgroundTransparency = 0.2
+Tab2Btn.Text = "飛天/瞬移"
+Tab2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Tab2Btn.Font = Enum.Font.SourceSansBold
+Tab2Btn.TextSize = 14
+Tab2Btn.Parent = TabFrame
+
+Tab1Btn.MouseButton1Click:Connect(function()
+    Page1.Visible = true; Page2.Visible = false
+    Tab1Btn.BackgroundColor3 = Color3.fromRGB(0, 255, 200); Tab1Btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    Tab2Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50); Tab2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+end)
+
+Tab2Btn.MouseButton1Click:Connect(function()
+    Page1.Visible = false; Page2.Visible = true
+    Tab2Btn.BackgroundColor3 = Color3.fromRGB(0, 255, 200); Tab2Btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    Tab1Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50); Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+end)
+
+-- 右上角飛天控制
+local FlyControl = Instance.new("Frame")
+FlyControl.Size = UDim2.new(0, 70, 0, 110)
+FlyControl.Position = UDim2.new(1, -80, 0, 80)
+FlyControl.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+FlyControl.BackgroundTransparency = 0.3
+FlyControl.Visible = false
+FlyControl.Parent = ScreenGui
+local FlyControlCorner = Instance.new("UICorner") FlyControlCorner.CornerRadius = UDim.new(0, 8) FlyControlCorner.Parent = FlyControl
+
+local UpBtn = Instance.new("TextButton")
+UpBtn.Size = UDim2.new(1, 0, 0.45, 0)
+UpBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 200)
+UpBtn.BackgroundTransparency = 0.2
+UpBtn.Text = "▲ 上升"
+UpBtn.Font = Enum.Font.SourceSansBold
+UpBtn.TextSize = 12
+UpBtn.Parent = FlyControl
+
+local DownBtn = Instance.new("TextButton")
+DownBtn.Size = UDim2.new(1, 0, 0.45, 0)
+DownBtn.Position = UDim2.new(0, 0, 0.55, 0)
+DownBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 200)
+DownBtn.BackgroundTransparency = 0.2
+DownBtn.Text = "▼ 下降"
+DownBtn.Font = Enum.Font.SourceSansBold
+DownBtn.TextSize = 12
+DownBtn.Parent = FlyControl
+
+UpBtn.MouseButton1Down:Connect(function() flyUp = true end)
+UpBtn.MouseButton1Up:Connect(function() flyUp = false end)
+DownBtn.MouseButton1Down:Connect(function() flyDown = true end)
+DownBtn.MouseButton1Up:Connect(function() flyDown = false end)
+
+-- 嚴格防隊友判定
+local function isTeammate(player)
+    if player == LocalPlayer then return true end
+    if player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then return true end
+    if player.TeamColor and LocalPlayer.TeamColor and player.TeamColor == LocalPlayer.TeamColor then return true end
+    if not player.Team and not player.TeamColor and player.TeamColor == LocalPlayer.TeamColor then return true end
+    return false
+end
+
+local function onCharacterAdded(character)
+    local root = character:WaitForChild("HumanoidRootPart")
+    if Config.FlyEnabled then
+        local hum = character:WaitForChild("Humanoid")
+        hum.PlatformStand = true
+        task.wait(0.1)
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyVelocity.Parent = root
+    end
+    if Config.FlyNoclip or Config.TPEnabled then
+        for _, part in pairs(character:GetChildren()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+end
+LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+
+-- 核心透視建立
+local function forceCreateESP(targetPlayer)
+    local character = targetPlayer.Character
+    if not character or not character:FindFirstChild("Head") then return end
+    local head = character.Head
+    if head:FindFirstChild("Native_ESP_UI") then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "Native_ESP_UI"
+    billboard.Size = UDim2.new(0, 120, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = head
+    billboard.Parent = head
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "Name"
+    nameLabel.Size = UDim2.new(1, 0, 0.4, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextStrokeTransparency = 0
+    nameLabel.TextScaled = true
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.Parent = billboard
+
+    local healthText = Instance.new("TextLabel")
+    healthText.Name = "HealthText"
+    healthText.Size = UDim2.new(1, 0, 0.3, 0)
+    healthText.Position = UDim2.new(0, 0, 0.4, 0)
+    healthText.BackgroundTransparency = 1
+    healthText.TextColor3 = Color3.fromRGB(0, 255, 0)
+    healthText.TextStrokeTransparency = 0
+    healthText.TextScaled = true
+    healthText.Font = Enum.Font.SourceSansBold
+    healthText.Parent = billboard
+
+    local healthBg = Instance.new("Frame")
+    healthBg.Name = "HealthBg"
+    healthBg.Size = UDim2.new(0, 3, 0.6, 0)
+    healthBg.Position = UDim2.new(0, -12, 0.2, 0)
+    healthBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    healthBg.Parent = billboard
+    local UICorner4 = Instance.new("UICorner") UICorner4.CornerRadius = UDim.new(0, 2) UICorner4.Parent = healthBg
+
+    local healthBar = Instance.new("Frame")
+    healthBar.Name = "HealthBar"
+    healthBar.Size = UDim2.new(1, 0, 1, 0)
+    healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    healthBar.Parent = healthBg
+    local UICorner5 = Instance.new("UICorner") UICorner5.CornerRadius = UDim.new(0, 2) UICorner5.Parent = healthBar
+
+    ESP_Objects[targetPlayer] = {
+        billboard = billboard, nameLabel = nameLabel,
+        healthText = healthText, healthBar = healthBar, healthBg = healthBg
+    }
+end
+
+local lastUpdate = 0
+RunService.RenderStepped:Connect(function()
+    if FlyControl.Visible ~= Config.FlyEnabled then FlyControl.Visible = Config.FlyEnabled end
+    local char = LocalPlayer.Character
+    local myRoot = char and char:FindFirstChild("HumanoidRootPart")
+    local myHum = char and char:FindFirstChildOfClass("Humanoid")
+
+    if isFlying and bodyVelocity and myRoot and myHum then
+        if Config.FlyNoclip then
+            for _, part in pairs(char:GetChildren()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+        local moveDir = Vector3.new(0, 0, 0)
+        local playerModule = LocalPlayer:FindFirstChild("PlayerScripts"):FindFirstChild("PlayerModule")
+        if playerModule then
+            local controls = require(playerModule):GetControls()
+            local moveVector = controls:GetMoveVector()
+            if moveVector.Magnitude > 0 then moveDir = (Camera.CFrame.LookVector * -moveVector.Z) + (Camera.CFrame.RightVector * moveVector.X) end
+        end
+        if flyUp then moveDir += Vector3.new(0, 1, 0) end
+        if flyDown then moveDir -= Vector3.new(0, 1, 0) end
+        if moveDir.Magnitude > 0 then bodyVelocity.Velocity = moveDir.Unit * flySpeed else bodyVelocity.Velocity = Vector3.new(0, 0, 0) end
+    end
+
+    if Config.TPEnabled and myRoot and myHum then
+        for _, part in pairs(char:GetChildren()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+        local closestPlayer, closestDist = nil, MaxDistance
+        for _, player in ipairs(Players:GetPlayers()) do
+            if not isTeammate(player) and player.Character then
+                local root = player.Character:FindFirstChild("HumanoidRootPart")
+                local hum = player.Character:FindFirstChildOfClass("Humanoid")
+                if root and hum and hum.Health > 0 then
+                    local dist = (myRoot.Position - root.Position).Magnitude
+                    if dist < closestDist then closestDist = dist; closestPlayer = player end
+                end
+            end
+        end
+        if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local enemyRoot = closestPlayer.Character.HumanoidRootPart
+            local enemyLook = enemyRoot.CFrame.LookVector
+            local targetPos
+            if Config.TP_Distance == 10 then targetPos = enemyRoot.Position + Vector3.new(0, 6.5, 0) 
+            elseif Config.TP_Distance == 5 then targetPos = enemyRoot.Position + Vector3.new(0, 3.5, 0)
+            else targetPos = enemyRoot.Position + (enemyLook * Config.TP_Distance) end
+            myRoot.CFrame = CFrame.new(targetPos, enemyRoot.Position) 
+        end
+    end
+
+    if not Config.Enabled then
+        for plr, _ in pairs(ESP_Objects) do 
+            if ESP_Objects[plr].billboard then ESP_Objects[plr].billboard:Destroy() end
+        end
+        ESP_Objects = {}
+        for _, line in pairs(TracerLines) do line.Visible = false end
+        return
+    end
+
+    local tick = tick()
+    if tick - lastUpdate < 0.05 then return end
+    lastUpdate = tick
+
+    local validEnemies = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if not isTeammate(player) and player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            local root = player.Character:FindFirstChild("HumanoidRootPart")
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            
+            if head and root and humanoid and humanoid.Health > 0 and myRoot then
+                local dist = (myRoot.Position - root.Position).Magnitude
+                if dist > MaxDistance then
+                    if ESP_Objects[player] then ESP_Objects[player].billboard:Destroy(); ESP_Objects[player] = nil end
+                else
+                    forceCreateESP(player)
+                    local ui = ESP_Objects[player]
+                    if ui and ui.billboard and ui.billboard.Parent then
+                        ui.nameLabel.Visible = Config.Name or Config.Distance
+                        if Config.Name and Config.Distance then ui.nameLabel.Text = player.Name .. " [" .. math.floor(dist) .. "m]"
+                        elseif Config.Name then ui.nameLabel.Text = player.Name
+                        elseif Config.Distance then ui.nameLabel.Text = "[" .. math.floor(dist) .. "m]" end
+                        
+                        ui.healthText.Visible = Config.HealthText
+                        ui.healthText.Text = math.floor(humanoid.Health) .. " HP"
+                        
+                        ui.healthBg.Visible = Config.HealthBar
+                        if Config.HealthBar then
+                            local ratio = humanoid.Health / humanoid.MaxHealth
+                            ui.healthBar.Size = UDim2.new(1, 0, ratio, 0)
+                            ui.healthBar.BackgroundColor3 = (ratio < 0.3) and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
+                        end
+                    end
+                    
+                    if Config.Chams then
+                        if not Chams_Objects[player] or not Chams_Objects[player].Highlight.Parent then
+                            if Chams_Objects[player] and Chams_Objects[player].Highlight then Chams_Objects[player].Highlight:Destroy() end
+                            local h = Instance.new("Highlight")
+                            h.FillColor = Color3.fromRGB(255, 50, 50)
+                            h.FillTransparency = 0.5
+                            h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                            h.Adornee = player.Character
+                            h.Parent = player.Character
+                            Chams_Objects[player] = {Highlight = h}
+                        end
+                    end
+                    
+                    table.insert(validEnemies, {player = player, dist = dist, head = head})
+                end
+            end
+        end
+    end
+
+    if Config.TracerEnabled then
+        table.sort(validEnemies, function(a, b) return a.dist < b.dist end)
+        local screenX = Camera.ViewportSize.X / 2
+        local screenY = 0
+        
+        for i = 1, MaxTracers do
+            local line = TracerLines[i]
+            if validEnemies[i] then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(validEnemies[i].head.Position)
+                line.From = Vector2.new(screenX, screenY)
+                line.To = Vector2.new(screenPos.X, screenPos.Y)
+                line.Visible = onScreen
+            else
+                line.Visible = false
+            end
+        end
+    else
+        for _, line in pairs(TracerLines) do line.Visible = false end
+    end
+end)
